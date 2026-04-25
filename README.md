@@ -1,7 +1,5 @@
 # platform-adr
 
-Platform Engineering Portfolio — Architecture Decision Records
-
 ## このリポジトリについて
 
 ポートフォリオ全体の技術選定の意思決定を記録したリポジトリです。
