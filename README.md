@@ -16,7 +16,7 @@ ADRや作業手順書など、platformに関係するドキュメント類を保
 |---|---|---|---|
 | [ADR-001](adr/ADR-001-gitops-engine.md) | GitOpsエンジンの選択 | platform-gitops / platform-infra | Accepted |
 | [ADR-002](adr/ADR-002-helm-library-chart.md) | Kubernetesマニフェスト抽象化方法の選択 | platform-charts / platform-gitops | Accepted |
-| [ADR-003](adr/ADR-003-secrets-management.md) | Secret管理戦略の選択 | platform-gitops | Accepted（一部検証中） |
+| [ADR-003](adr/ADR-003-secrets-management.md) | Secret管理戦略の選択 | platform-gitops | Accepted |
 | [ADR-004](adr/ADR-004-postgresql-operator.md) | PostgreSQL Operatorの選択 | platform-gitops / platform-charts | Accepted |
 | [ADR-005](adr/ADR-005-crossplane.md) | インフラリソース管理の責務分離（Crossplane vs Terraform） | platform-gitops / platform-infra | Accepted |
 | [ADR-006](adr/ADR-006-cilium.md) | CNIの選択（Cilium） | platform-infra | Accepted |
