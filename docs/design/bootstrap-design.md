@@ -115,6 +115,7 @@ platform/applications/   # 全 Application を直下にフラット配置
 | `admissionregistration.k8s.io/ValidatingWebhookConfiguration` | webhook CA bundle の注入完了。cert-manager・CNPG・ESO・Kyverno の webhook が呼び出し可能な状態になるまで次の wave に進まない |
 | `external-secrets.io/ClusterSecretStore` | ESO が外部プロバイダー（kubernetes-store）へ接続できているか |
 | `external-secrets.io/ExternalSecret` | ESO が Secret を正常に生成できているか |
+| `postgresql.cnpg.io/Cluster` | CNPG Cluster が `Cluster in healthy state` に達したか。ヘルスチェック未定義の場合 ArgoCD はリソース作成直後に Healthy と判定するため、DB が未起動のまま依存コンポーネント（keycloak・backstage）の wave に進んでしまう |
 
 ---
 
