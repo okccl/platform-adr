@@ -112,6 +112,7 @@ platform/applications/   # 全 Application を直下にフラット配置
 
 | リソース種別 | 保証する内容 |
 |---|---|
+| `gateway.networking.k8s.io/Gateway` | Envoy proxy が実際に起動してトラフィックを処理できる状態か（`Programmed: True`）。wave 4 完了判定に使用。ヘルスチェック未定義の場合、Gateway オブジェクト作成直後に Healthy と判定され wave 10 が早期起動してしまう |
 | `admissionregistration.k8s.io/ValidatingWebhookConfiguration` | webhook CA bundle の注入完了。cert-manager・CNPG・ESO・Kyverno の webhook が呼び出し可能な状態になるまで次の wave に進まない |
 | `external-secrets.io/ClusterSecretStore` | ESO が外部プロバイダー（kubernetes-store）へ接続できているか |
 | `external-secrets.io/ExternalSecret` | ESO が Secret を正常に生成できているか |
