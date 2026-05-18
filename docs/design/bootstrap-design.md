@@ -8,9 +8,58 @@
 
 ---
 
-## 2. ルート App 構成
+## 2. Bootstrap フロー
 
-### 2.1 Application 定義
+`make bootstrap` が実行するステップ。
+
+| ステップ | Make ターゲット | 内容 |
+|---|---|---|
+| 1 | `cluster-create` | k3d クラスタ作成 |
+| 2 | `install-cilium` | Cilium インストール（ArgoCD 起動前に CNI が必要） |
+| 3 | `fix-coredns` | CoreDNS 設定（後述） |
+| 4 | `bootstrap-argocd` | cert-manager/argocd namespace 作成・CA 投入・ArgoCD インストール・認証情報投入 |
+| 5 | `bootstrap-sync` | ルート App apply → Keycloak 起動まで待機 |
+| 6 | `bootstrap-apps` | user-apps-infra（Namespace・AppProject）の稼働確認後に apps-root App apply |
+
+`bootstrap-sync` の詳細：
+
+```
+1. ArgoCD port-forward 起動 + localhost:8080 でログイン
+2. root App を apply（kubectl apply -f root.yaml）
+3. Envoy Gateway Pod が Ready になるまで待機
+   （argocd.platform.local アクセスに必要）
+4. ArgoCD ログインを argocd.platform.local 経由に切り替え
+5. wave-5 ArgoCD 自己管理 sync の完了を待機（Application health status を kubectl で直接監視）
+6. [マイルストーン①] ArgoCD 起動完了を表示（URL・admin パスワード）
+7. keycloak pod が Ready になるまで待機（kubectl wait ループ）
+8. [マイルストーン②] bootstrap 完了を表示（ArgoCD URL・Keycloak URL）
+```
+
+### 2.1 CoreDNS 設定
+
+`make fix-coredns`（ステップ 3）で以下の 2 つを CoreDNS ConfigMap に書き込む。bootstrap 前の時点で実行するため、Envoy Gateway SVC が存在しない状態でも事前に書き込み可能。
+
+**NodeHosts — `host.k3d.internal` の登録**
+
+MinIO コンテナ（`minio-external`）への疎通のため、k3d ネットワークのゲートウェイ IP を `host.k3d.internal` として登録する。
+
+**Corefile — `*.platform.local` のリライトルール**
+
+クラスタ内 Pod が `keycloak.platform.local` などを解決できるよう、Envoy Gateway の Service 名へリライトする。
+
+```
+rewrite name keycloak.platform.local  envoy-eg.envoy-gateway-system.svc.cluster.local
+rewrite name argocd.platform.local    envoy-eg.envoy-gateway-system.svc.cluster.local
+rewrite name backstage.platform.local envoy-eg.envoy-gateway-system.svc.cluster.local
+```
+
+Service 名は `platform/gateway/config/envoy-proxy-config.yaml`（EnvoyProxy リソース）で `envoy-eg` に固定しているため、bootstrap 前の時点で確定した名前を記述できる。
+
+---
+
+## 3. ルート App 構成
+
+### 3.1 Application 定義
 
 `platform-gitops/platform/group-roots/root.yaml` に単一の App-of-Apps を定義する。
 
@@ -42,7 +91,7 @@ spec:
       - CreateNamespace=true
 ```
 
-### 2.2 ディレクトリ構造
+### 3.2 ディレクトリ構造
 
 ```
 platform/applications/   # 全 Application を直下にフラット配置
@@ -50,11 +99,11 @@ platform/applications/   # 全 Application を直下にフラット配置
 
 ---
 
-## 3. Wave 設計
+## 4. Wave 設計
 
 グループ間の wave 番号は 10 刻みで分離し、グループをまたぐ依存関係が wave 制御で確実に解消されるようにしている。
 
-### 3.1 Wave 0–5（ネットワーク基盤）
+### 4.1 Wave 0–5（ネットワーク基盤）
 
 | Wave | Application | 依存根拠 |
 |---|---|---|
@@ -67,7 +116,7 @@ platform/applications/   # 全 Application を直下にフラット配置
 | 4 | gateway-config | envoy-gateway（Gateway/EnvoyProxy）+ cert-manager-config（TLS 証明書） |
 | 5 | argocd | 自己管理 Helm sync により全コンポーネント再起動。完了まで wave 10 に進まない |
 
-### 3.2 Wave 10–16（認証・シークレット基盤）
+### 4.2 Wave 10–16（認証・シークレット基盤）
 
 | Wave | Application | 依存根拠 |
 |---|---|---|
@@ -83,7 +132,7 @@ platform/applications/   # 全 Application を直下にフラット配置
 | 16 | keycloak-config-cli | keycloak（設定投入先） |
 | 16 | keycloak-routes | keycloak（HTTPRoute のバックエンド） |
 
-### 3.3 Wave 20–23（その他プラットフォームコンポーネント）
+### 4.3 Wave 20–23（その他プラットフォームコンポーネント）
 
 | Wave | Application | 依存根拠 |
 |---|---|---|
@@ -106,7 +155,7 @@ platform/applications/   # 全 Application を直下にフラット配置
 
 ---
 
-## 4. カスタムヘルスチェック
+## 5. カスタムヘルスチェック
 
 `platform/argocd/values.yaml` に定義。wave の進行条件として ArgoCD が使用する。
 
@@ -117,52 +166,3 @@ platform/applications/   # 全 Application を直下にフラット配置
 | `external-secrets.io/ClusterSecretStore` | ESO が外部プロバイダー（kubernetes-store）へ接続できているか |
 | `external-secrets.io/ExternalSecret` | ESO が Secret を正常に生成できているか |
 | `postgresql.cnpg.io/Cluster` | CNPG Cluster が `Cluster in healthy state` に達したか。ヘルスチェック未定義の場合 ArgoCD はリソース作成直後に Healthy と判定するため、DB が未起動のまま依存コンポーネント（keycloak・backstage）の wave に進んでしまう |
-
----
-
-## 5. Bootstrap フロー
-
-`make bootstrap` が実行するステップ。
-
-| ステップ | Make ターゲット | 内容 |
-|---|---|---|
-| 1 | `cluster-create` | k3d クラスタ作成 |
-| 2 | `install-cilium` | Cilium インストール（ArgoCD 起動前に CNI が必要） |
-| 3 | `fix-coredns` | CoreDNS 設定（後述） |
-| 4 | `bootstrap-argocd` | cert-manager/argocd namespace 作成・CA 投入・ArgoCD インストール・認証情報投入 |
-| 5 | `bootstrap-sync` | ルート App apply → Keycloak 起動まで待機 |
-| 6 | `bootstrap-apps` | user-apps-infra（Namespace・AppProject）の稼働確認後に apps-root App apply |
-
-`bootstrap-sync` の詳細：
-
-```
-1. ArgoCD port-forward 起動 + localhost:8080 でログイン
-2. root App を apply（kubectl apply -f root.yaml）
-3. Envoy Gateway Pod が Ready になるまで待機
-   （argocd.platform.local アクセスに必要）
-4. ArgoCD ログインを argocd.platform.local 経由に切り替え
-5. wave-5 ArgoCD 自己管理 sync の完了を待機（Application health status を kubectl で直接監視）
-6. [マイルストーン①] ArgoCD 起動完了を表示（URL・admin パスワード）
-7. keycloak pod が Ready になるまで待機（kubectl wait ループ）
-8. [マイルストーン②] bootstrap 完了を表示（ArgoCD URL・Keycloak URL）
-```
-
-### 5.1 CoreDNS 設定
-
-`make fix-coredns`（ステップ 3）で以下の 2 つを CoreDNS ConfigMap に書き込む。bootstrap 前の時点で実行するため、Envoy Gateway SVC が存在しない状態でも事前に書き込み可能。
-
-**NodeHosts — `host.k3d.internal` の登録**
-
-MinIO コンテナ（`minio-external`）への疎通のため、k3d ネットワークのゲートウェイ IP を `host.k3d.internal` として登録する。
-
-**Corefile — `*.platform.local` のリライトルール**
-
-クラスタ内 Pod が `keycloak.platform.local` などを解決できるよう、Envoy Gateway の Service 名へリライトする。
-
-```
-rewrite name keycloak.platform.local  envoy-eg.envoy-gateway-system.svc.cluster.local
-rewrite name argocd.platform.local    envoy-eg.envoy-gateway-system.svc.cluster.local
-rewrite name backstage.platform.local envoy-eg.envoy-gateway-system.svc.cluster.local
-```
-
-Service 名は `platform/gateway/config/envoy-proxy-config.yaml`（EnvoyProxy リソース）で `envoy-eg` に固定しているため、bootstrap 前の時点で確定した名前を記述できる。
