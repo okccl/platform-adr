@@ -111,6 +111,7 @@ platform/applications/   # 全 Application を直下にフラット配置
 | 1 | cert-manager | 依存なし |
 | 1 | cilium | 依存なし |
 | 1 | envoy-gateway-crds | 依存なし（CRD 先行インストール） |
+| 1 | prometheus-operator-crds | 依存なし（CRD 先行インストール。cert-manager 等の早期 wave App が ServiceMonitor を作成できるようにする） |
 | 2 | envoy-gateway | envoy-gateway-crds（CRD 依存） |
 | 3 | cert-manager-config | cert-manager webhook（CA Issuer・Certificate） |
 | 4 | gateway-config | envoy-gateway（Gateway/EnvoyProxy）+ cert-manager-config（TLS 証明書） |
