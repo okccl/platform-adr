@@ -54,7 +54,7 @@ platform/applications/   # 全 Application を直下にフラット配置
 
 グループ間の wave 番号は 10 刻みで分離し、グループをまたぐ依存関係が wave 制御で確実に解消されるようにしている。
 
-### 3.1 Wave 0–4（ネットワーク基盤）
+### 3.1 Wave 0–5（ネットワーク基盤）
 
 | Wave | Application | 依存根拠 |
 |---|---|---|
@@ -65,16 +65,9 @@ platform/applications/   # 全 Application を直下にフラット配置
 | 2 | envoy-gateway | envoy-gateway-crds（CRD 依存） |
 | 3 | cert-manager-config | cert-manager webhook（CA Issuer・Certificate） |
 | 4 | gateway-config | envoy-gateway（Gateway/EnvoyProxy）+ cert-manager-config（TLS 証明書） |
+| 5 | argocd | 自己管理 Helm sync により全コンポーネント再起動。完了まで wave 10 に進まない |
 
-### 3.2 Wave 5（ArgoCD 自己管理）
-
-| Wave | Application | 依存根拠 |
-|---|---|---|
-| 5 | argocd | gateway-config 完了後に自己管理 sync を実行。Deployment/StatefulSet の built-in ヘルスチェックにより全コンポーネント再起動完了まで wave 10 に進まない |
-
-wave 4 完了（Envoy Gateway 起動）→ wave 5 で ArgoCD が自己管理 Helm sync を実行し再起動 → 再起動完了後に wave 10 が開始する。これにより wave 10–16（keycloak bootstrap）中に ArgoCD が再起動することを防ぐ。
-
-### 3.3 Wave 10–16（認証・シークレット基盤）
+### 3.2 Wave 10–16（認証・シークレット基盤）
 
 | Wave | Application | 依存根拠 |
 |---|---|---|
@@ -90,7 +83,7 @@ wave 4 完了（Envoy Gateway 起動）→ wave 5 で ArgoCD が自己管理 Hel
 | 16 | keycloak-config-cli | keycloak（設定投入先） |
 | 16 | keycloak-routes | keycloak（HTTPRoute のバックエンド） |
 
-### 3.4 Wave 20–23（その他プラットフォームコンポーネント）
+### 3.3 Wave 20–23（その他プラットフォームコンポーネント）
 
 | Wave | Application | 依存根拠 |
 |---|---|---|
@@ -119,7 +112,7 @@ wave 4 完了（Envoy Gateway 起動）→ wave 5 で ArgoCD が自己管理 Hel
 
 | リソース種別 | 保証する内容 |
 |---|---|
-| `gateway.networking.k8s.io/Gateway` | Envoy proxy が実際に起動してトラフィックを処理できる状態か（`Programmed: True`）。wave 4 完了判定に使用。ヘルスチェック未定義の場合、Gateway オブジェクト作成直後に Healthy と判定され wave 10 が早期起動してしまう |
+| `gateway.networking.k8s.io/Gateway` | Envoy proxy が実際に起動してトラフィックを処理できる状態か（`Programmed: True`）。wave 4 完了判定に使用。 |
 | `admissionregistration.k8s.io/ValidatingWebhookConfiguration` | webhook CA bundle の注入完了。cert-manager・CNPG・ESO・Kyverno の webhook が呼び出し可能な状態になるまで次の wave に進まない |
 | `external-secrets.io/ClusterSecretStore` | ESO が外部プロバイダー（kubernetes-store）へ接続できているか |
 | `external-secrets.io/ExternalSecret` | ESO が Secret を正常に生成できているか |
