@@ -161,6 +161,7 @@ platform/applications/   # 全 Application を直下にフラット配置
 
 | リソース種別 | 保証する内容 |
 |---|---|
+| `argoproj.io/Application` | 新規作成直後の Application は `status.health.status` が nil のため、ArgoCD はデフォルトで Unknown と判定して wave をブロックしない。このチェックにより nil/空 status を Progressing として扱い、Application が真に Healthy になるまで次の wave に進まないことを保証する |
 | `gateway.networking.k8s.io/Gateway` | Envoy proxy が実際に起動してトラフィックを処理できる状態か（`Programmed: True`）。wave 4 完了判定に使用。 |
 | `admissionregistration.k8s.io/ValidatingWebhookConfiguration` | webhook CA bundle の注入完了。cert-manager・CNPG・ESO・Kyverno の webhook が呼び出し可能な状態になるまで次の wave に進まない |
 | `external-secrets.io/ClusterSecretStore` | ESO が外部プロバイダー（kubernetes-store）へ接続できているか |
