@@ -24,11 +24,11 @@
 `bootstrap-sync` の詳細：
 
 ```
-1. ArgoCD port-forward 起動 + localhost:8080 でログイン
-2. root App を apply（kubectl apply -f root.yaml）
+1. root App を apply（kubectl apply -f root.yaml）
+2. kubectl annotate で即時リフレッシュをトリガー（auto-sync 待機を回避）
 3. Envoy Gateway Pod が Ready になるまで待機
    （argocd.platform.local アクセスに必要）
-4. ArgoCD ログインを argocd.platform.local 経由に切り替え
+4. argocd.platform.local 経由でログイン
 5. wave-5 ArgoCD 自己管理 sync の完了を待機（Application health status を kubectl で直接監視）
 6. [マイルストーン①] ArgoCD 起動完了を表示（URL・admin パスワード）
 7. keycloak pod が Ready になるまで待機（kubectl wait ループ）
