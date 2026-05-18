@@ -149,7 +149,7 @@ platform/applications/   # 全 Application を直下にフラット配置
 | 21 | crossplane-config | crossplane |
 | 21 | grafana-dashboards | kube-prometheus-stack（ConfigMap 自動検出） |
 | 21 | platform-alerts | kube-prometheus-stack（PrometheusRule） |
-| 21 | user-apps-infra | 依存なし（sample-app Namespace + sample-apps AppProject） |
+| 21 | user-apps-infra | 依存なし（sample-app Namespace + sample-apps AppProject）→完了後にbootstrap-apps開始 |
 | 22 | backstage | backstage-db（DB 接続先） |
 | 23 | trivy-operator | 依存なし（スキャン開始を他コンポーネント起動後に後回し） |
 
