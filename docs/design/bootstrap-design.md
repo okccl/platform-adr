@@ -14,6 +14,7 @@
 
 | ステップ | Make ターゲット | 内容 |
 |---|---|---|
+| 0 | `bootstrap-start` | `/tmp/bootstrap_start` に開始 epoch を記録（経過時間計測用） |
 | 1 | `cluster-create` | k3d クラスタ作成 |
 | 2 | `install-cilium` | Cilium インストール（ArgoCD 起動前に CNI が必要） |
 | 3 | `fix-coredns` | CoreDNS 設定（後述） |
@@ -30,9 +31,20 @@
    （argocd.platform.local アクセスに必要）
 4. argocd.platform.local 経由でログイン
 5. wave-5 ArgoCD 自己管理 sync の完了を待機（Application health status を kubectl で直接監視）
-6. [マイルストーン①] ArgoCD 起動完了を表示（URL・admin パスワード）
+6. [マイルストーン①] ArgoCD 起動完了を表示（URL・admin パスワード・経過時間）
 7. keycloak pod が Ready になるまで待機（kubectl wait ループ）
-8. [マイルストーン②] bootstrap 完了を表示（ArgoCD URL・Keycloak URL）
+8. [マイルストーン②] Keycloak 起動完了を表示（ArgoCD URL・Keycloak URL・経過時間）
+```
+
+`bootstrap-apps` の詳細：
+
+```
+1. user-apps-infra Application が Healthy になるまで待機
+2. apps-root App を apply（kubectl apply -f apps-root.yaml）
+3. root Application（wave 0–23 全体）が Healthy になるまで待機
+4. [マイルストーン③] Platform Bootstrap 完了を表示（全 URL・総経過時間）
+5. apps-root Application が Healthy になるまで待機
+6. [マイルストーン④] アプリ起動完了を表示（総経過時間のみ）
 ```
 
 ### 2.1 CoreDNS 設定
