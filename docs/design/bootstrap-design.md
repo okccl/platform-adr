@@ -66,7 +66,15 @@ platform/applications/   # 全 Application を直下にフラット配置
 | 3 | cert-manager-config | cert-manager webhook（CA Issuer・Certificate） |
 | 4 | gateway-config | envoy-gateway（Gateway/EnvoyProxy）+ cert-manager-config（TLS 証明書） |
 
-### 3.2 Wave 10–15（認証・シークレット基盤）
+### 3.2 Wave 5（ArgoCD 自己管理）
+
+| Wave | Application | 依存根拠 |
+|---|---|---|
+| 5 | argocd | gateway-config 完了後に自己管理 sync を実行。Deployment/StatefulSet の built-in ヘルスチェックにより全コンポーネント再起動完了まで wave 10 に進まない |
+
+wave 4 完了（Envoy Gateway 起動）→ wave 5 で ArgoCD が自己管理 Helm sync を実行し再起動 → 再起動完了後に wave 10 が開始する。これにより wave 10–16（keycloak bootstrap）中に ArgoCD が再起動することを防ぐ。
+
+### 3.3 Wave 10–16（認証・シークレット基盤）
 
 | Wave | Application | 依存根拠 |
 |---|---|---|
@@ -82,13 +90,12 @@ platform/applications/   # 全 Application を直下にフラット配置
 | 16 | keycloak-config-cli | keycloak（設定投入先） |
 | 16 | keycloak-routes | keycloak（HTTPRoute のバックエンド） |
 
-### 3.3 Wave 20–23（その他プラットフォームコンポーネント）
+### 3.4 Wave 20–23（その他プラットフォームコンポーネント）
 
 | Wave | Application | 依存根拠 |
 |---|---|---|
 | 20 | alloy | 依存なし（loki/tempo は起動後に接続） |
 | 20 | argo-rollouts | 依存なし |
-| 20 | argocd | 依存なし（self-manage） |
 | 20 | crossplane | 依存なし |
 | 20 | gateway-routes | 依存なし（バックエンドは前グループで起動済み） |
 | 20 | goldilocks | 依存なし |
@@ -141,9 +148,10 @@ platform/applications/   # 全 Application を直下にフラット配置
 3. Envoy Gateway Pod が Ready になるまで待機
    （argocd.platform.local アクセスに必要）
 4. ArgoCD ログインを argocd.platform.local 経由に切り替え
-5. [マイルストーン①] ArgoCD 起動完了を表示（URL・admin パスワード）
-6. keycloak App が Healthy になるまで待機（timeout 900s）
-7. [マイルストーン②] bootstrap 完了を表示（ArgoCD URL・Keycloak URL）
+5. wave-5 ArgoCD 自己管理 sync の完了を待機（Application health status を kubectl で直接監視）
+6. [マイルストーン①] ArgoCD 起動完了を表示（URL・admin パスワード）
+7. keycloak pod が Ready になるまで待機（kubectl wait ループ）
+8. [マイルストーン②] bootstrap 完了を表示（ArgoCD URL・Keycloak URL）
 ```
 
 ### 5.1 CoreDNS 設定
