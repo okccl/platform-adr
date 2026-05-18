@@ -145,3 +145,4 @@ platform/applications/   # 全 Application を直下にフラット配置
 | `external-secrets.io/ExternalSecret` | ESO が Secret を正常に生成できているか |
 | `postgresql.cnpg.io/Cluster` | CNPG Cluster が `Cluster in healthy state` に達したか。ヘルスチェック未定義の場合 ArgoCD はリソース作成直後に Healthy と判定するため、DB が未起動のまま依存コンポーネント（keycloak・backstage）の wave に進んでしまう |
 | `apiextensions.k8s.io/CustomResourceDefinition` | 常に Healthy を返す（存在すれば OK）。組み込みチェックは apply 直後の一時的な状態を Degraded と判定して wave を止めるため上書きしている。CRD は cert-manager・cilium の起動待ち中に Established が完了するため、wave 2 開始時点では必ず使用可能 |
+| `gateway.networking.k8s.io/HTTPRoute` | `Accepted: True` であれば Healthy と判定。`ResolvedRefs` は確認しない。gateway-routes（wave 20）が backstage HTTPRoute を作成した時点ではバックエンド Service（wave 22）がまだ存在しないため `ResolvedRefs=False` になるが、ルートとして受理されていれば問題ない。バックエンドの起動確認は backstage Application 側のヘルスチェックで担保する |
