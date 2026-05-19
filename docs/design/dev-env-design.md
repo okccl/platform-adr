@@ -69,10 +69,12 @@ Backstage Scaffolder でアプリ払い出し時に基本セットの `aqua.yaml
 
 ## 4. アプリリポジトリへの aqua.yaml 払い出し
 
-（作成中）
+アプリ払い出し時に Backstage Scaffolder が基本セットの `aqua.yaml` を自動生成する。  
+Scaffolder の設計詳細は `scaffolder-design.md` を参照。
 
 ---
 
 ## 5. DR 復旧時の位置づけ
 
-（作成中）
+`make init` は新規環境構築・DR 復旧の両方で実行する起点となる。  
+DR 手順全体における位置づけは `DR-design.md` を参照。
