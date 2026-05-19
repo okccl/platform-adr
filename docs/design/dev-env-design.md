@@ -1,7 +1,5 @@
 # 開発環境セットアップ設計書
 
-> **ステータス**: 作成中
-
 ---
 
 ## 1. 概要
@@ -63,7 +61,24 @@ Backstage Scaffolder でアプリ払い出し時に基本セットの `aqua.yaml
 
 ## 3. シェル環境の初期化
 
-### 3.1 make init による自動化方針（作成中）
+### 3.1 make init による自動化方針
+
+シェル環境の初期化（`.bashrc` への設定追記）を手動手順ではなく `scripts/bootstrap.sh` と `make init` で担う。
+
+手動手順として DR 手順書に記載する方法も選択肢としてあったが、このプロジェクトでは「再現性はコードで担保する」を原則としているため、実行可能なスクリプトに落とす方針を採った。同様の理由で ArgoCD を導入しており、ツール設定についても同じ考え方を適用している。
+
+**役割分担**
+
+| コマンド | 役割 | 実行タイミング |
+|---|---|---|
+| `make bootstrap` | WSL レベルのセットアップ（Homebrew・aqua・Docker・direnv のインストール、`.bashrc` への追記） | 新規 WSL 環境構築時に 1 回 |
+| `make init` | ツールのインストール（`aqua install`） | bootstrap 後、および DR 復旧時 |
+
+`make bootstrap` は aqua 本体のインストールと `.bashrc` への PATH・`AQUA_GLOBAL_CONFIG` 追記を行う。  
+`.bashrc` への追記はべき等に実装しており（`grep` で既存行を確認してから追記）、複数回実行しても重複しない。
+
+`make init` は `aqua install` のみを実行する薄いラッパーとしている。  
+ツール定義は `platform-infra/aqua.yaml` に集約されているため、このコマンド 1 つで全 PE ツールが揃う。
 
 ---
 
