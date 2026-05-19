@@ -5,6 +5,7 @@
 | 1 | ArgoCD SharedResourceWarning 解消（ReferenceGrant 整理・keycloak-routes 廃止） |
 | 2 | gateway-routes Wave 引き上げ・bootstrap-sync 修正 |
 | 3 | Backstage 起動時 DB 接続 retry 対応 |
+| 4 | aqua 導入・mise 廃止 |
 
 ---
 
@@ -131,6 +132,54 @@ push 後、GitHub Actions によりイメージがビルドされ platform-gitop
 
 ---
 
+## 4. aqua 導入・mise 廃止
+
+### 背景
+
+複数リポジトリで `.mise.toml` をコピー管理しており、ツール追加時に全リポジトリへの手動反映が必要だった。ADR-007 でこの問題を認識し暫定対応（コピー管理）を続けていたが、aqua の `AQUA_GLOBAL_CONFIG` がこの問題をより良い形で解決できると判断し移行した。
+
+mise と aqua を併用する状態を避けるため、言語ランタイム（node）も含めて aqua に統一した。
+
+### 実施手順
+
+**aqua インストール・シェル設定:**
+
+```bash
+brew install aqua
+# ~/.bashrc に追記
+export PATH="${AQUA_ROOT_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/aquaproj-aqua}/bin:$PATH"
+export AQUA_GLOBAL_CONFIG="$HOME/platform-infra/aqua.yaml"
+# mise activate 行を削除
+```
+
+**`platform-infra/aqua.yaml` 作成（PE ツール全量）:**
+
+```yaml
+registries:
+  - type: standard
+    ref: v4.513.0
+packages:
+  - name: kubernetes/kubectl@v1.35.3
+  - name: helm/helm@v3.20.1
+  - name: k3d-io/k3d@v5.8.3
+  - name: argoproj/argo-cd@v3.2.9
+  - name: getsops/sops@v3.12.2
+  - name: FiloSottile/age@v1.3.1
+  - name: argoproj/argo-rollouts@v1.8.3
+  - name: hatoo/oha@v1.14.0
+  - name: cli/cli@v2.87.2
+```
+
+**アプリリポジトリ（sample-backend / sample-frontend / backstage）に `aqua.yaml` を新規作成:**
+
+PE チームは `AQUA_GLOBAL_CONFIG` でグローバル参照するため `platform-gitops` / `platform-charts` にはファイル不要。アプリチームは `platform-infra` をクローンしないため各リポジトリに自己完結で配置。backstage は基本セットに加え `nodejs/node@v24.15.0` を追加。
+
+**`bootstrap.sh` / `Makefile` 更新:**
+
+`bootstrap.sh` の mise インストール処理を aqua（`brew install aqua`）に置き換え、`.bashrc` 追記も aqua 用に変更。`make init` を `mise install` → `aqua install` に変更。
+
+---
+
 ## 変更ファイル一覧
 
 | ファイル | 変更内容 |
@@ -150,3 +199,9 @@ push 後、GitHub Actions によりイメージがビルドされ platform-gitop
 | `k3d/Makefile`（platform-infra） | bootstrap-sync に gateway-routes 完了待機を追加 |
 | `packages/backend/Dockerfile`（backstage） | postgresql-client 追加・entrypoint.sh 組み込み |
 | `packages/backend/entrypoint.sh`（backstage） | 新規作成（pg_isready 待機） |
+| `aqua.yaml`（platform-infra） | 新規作成（PE ツール全量・source of truth） |
+| `.mise.toml`（platform-infra / platform-gitops / platform-charts） | 削除 |
+| `aqua.yaml`（sample-backend / sample-frontend / backstage） | 新規作成（アプリ基本セット） |
+| `.mise.toml`（sample-backend / sample-frontend / backstage） | 削除 |
+| `scripts/bootstrap.sh`（platform-infra） | mise → aqua に置き換え |
+| `Makefile`（platform-infra） | `make init` を `aqua install` に変更 |
