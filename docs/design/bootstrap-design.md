@@ -33,7 +33,9 @@
 5. wave-5 ArgoCD 自己管理 sync の完了を待機（Application health status を kubectl で直接監視）
 6. [マイルストーン①] ArgoCD 起動完了を表示（URL・admin パスワード・経過時間）
 7. keycloak pod が Ready になるまで待機（kubectl wait ループ）
-8. [マイルストーン②] Keycloak 起動完了を表示（ArgoCD URL・Keycloak URL・経過時間）
+8. gateway-routes Application が Healthy になるまで待機
+   （keycloak.platform.local へのアクセスに HTTPRoute が必要なため）
+9. [マイルストーン②] Keycloak 起動完了を表示（ArgoCD URL・Keycloak URL・経過時間）
 ```
 
 `bootstrap-apps` の詳細：
@@ -119,7 +121,7 @@ platform/applications/   # 全 Application を直下にフラット配置
 | 14 | keycloak-db | cnpg webhook + external-secrets-config（wave 13 で DB Secret 生成済み） |
 | 15 | keycloak | keycloak-db（DB 接続先） |
 | 16 | keycloak-config-cli | keycloak（設定投入先） |
-| 16 | keycloak-routes | keycloak（HTTPRoute のバックエンド） |
+| 16 | gateway-routes | keycloak-config-cli と同 wave で HTTPRoute を公開。マイルストーン② 時点で keycloak.platform.local にアクセスできることを保証する |
 
 ### 4.3 Wave 20–23（その他プラットフォームコンポーネント）
 
@@ -128,7 +130,6 @@ platform/applications/   # 全 Application を直下にフラット配置
 | 20 | alloy | 依存なし（loki/tempo は起動後に接続） |
 | 20 | argo-rollouts | 依存なし |
 | 20 | crossplane | 依存なし |
-| 20 | gateway-routes | 依存なし（バックエンドは前グループで起動済み） |
 | 20 | goldilocks | 依存なし |
 | 20 | keda | 依存なし |
 | 20 | loki | 依存なし |
@@ -157,4 +158,4 @@ platform/applications/   # 全 Application を直下にフラット配置
 | `external-secrets.io/ExternalSecret` | ESO が Secret を正常に生成できているか |
 | `postgresql.cnpg.io/Cluster` | CNPG Cluster が `Cluster in healthy state` に達したか。ヘルスチェック未定義の場合 ArgoCD はリソース作成直後に Healthy と判定するため、DB が未起動のまま依存コンポーネント（keycloak・backstage）の wave に進んでしまう |
 | `apiextensions.k8s.io/CustomResourceDefinition` | 常に Healthy を返す（存在すれば OK）。組み込みチェックは apply 直後の一時的な状態を Degraded と判定して wave を止めるため上書きしている。CRD は cert-manager・cilium の起動待ち中に Established が完了するため、wave 2 開始時点では必ず使用可能 |
-| `gateway.networking.k8s.io/HTTPRoute` | `Accepted: True` であれば Healthy と判定。`ResolvedRefs` は確認しない。gateway-routes（wave 20）が backstage HTTPRoute を作成した時点ではバックエンド Service（wave 22）がまだ存在しないため `ResolvedRefs=False` になるが、ルートとして受理されていれば問題ない。バックエンドの起動確認は backstage Application 側のヘルスチェックで担保する |
+| `gateway.networking.k8s.io/HTTPRoute` | `Accepted: True` であれば Healthy と判定。`ResolvedRefs` は確認しない。gateway-routes（wave 16）が backstage HTTPRoute を作成した時点ではバックエンド Service（wave 22）がまだ存在しないため `ResolvedRefs=False` になるが、ルートとして受理されていれば問題ない。バックエンドの起動確認は backstage Application 側のヘルスチェックで担保する |
